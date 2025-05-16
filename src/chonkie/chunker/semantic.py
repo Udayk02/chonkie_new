@@ -244,30 +244,26 @@ class SemanticChunker(BaseChunker):
         # Combine short splits with previous sentence
         current = ""
         sentences = []
-        idx = 0     # tracks the position
-        
         for s in splits:
             # If the split is short, add to current and if long add to sentences
             if len(s) < self.min_characters_per_sentence:
                 current += s
             elif current:
                 current += s
-                sentences.append((current, idx, idx + len(current)))
+                sentences.append(current)
                 current = ""
-                idx += len(current)
             else:
-                sentences.append((s, idx, idx + len(s))) 
+                sentences.append(s)
 
             # At any point if the current sentence is longer than the min_characters_per_sentence,
             # add it to the sentences
             if len(current) >= self.min_characters_per_sentence:
-                sentences.append((current, idx, idx + len(current)))
+                sentences.append(current)
                 current = ""
-                idx += len(current)
 
         # If there is a current split, add it to the sentences
         if current:
-            sentences.append((current, idx, idx + len(current)))
+            sentences.append(current)
 
         return sentences
 
@@ -292,12 +288,16 @@ class SemanticChunker(BaseChunker):
             return []
 
         # Split text into sentences
-        raw_sentence_splits = self._split_sentences(text)
-        raw_sentences = [s[0] for s in raw_sentence_splits]
-        sentence_indices = [(s[1], s[2]) for s in raw_sentence_splits]
-        
-        print(f"raw_sentences: {raw_sentences}")
-        print(f"sentence_indices: {sentence_indices}")
+        raw_sentences = self._split_sentences(text)
+
+        # Get start and end indices for each sentence
+        sentence_indices = []
+        current_idx = 0
+        for sent in raw_sentences:
+            start_idx = text.find(sent, current_idx)
+            end_idx = start_idx + len(sent)
+            sentence_indices.append((start_idx, end_idx))
+            current_idx = end_idx
 
         # Batch compute embeddings for all sentences
         # The embeddings are computed assuming a similarity window is applied
